@@ -26,7 +26,7 @@ public class NoticeController {
     private final NoticeService noticeService;
 
     // 게시판 리스트 보여주기
-    @GetMapping("noticeList")
+    @GetMapping("/noticeList")
     public String noticeList(ModelMap model) {
         log.info(this.getClass().getName() + ".noticeList start");
 
@@ -39,6 +39,7 @@ public class NoticeController {
 
         // 조회된 리스트 결과값 넣어주기
         model.addAttribute("noticeList", noticeList);
+        log.info("### noticeList : {}", noticeList.get(0).getTitle());
 
         // 변수 초기화(메모리 효율화 시키기 위해 사용)
         noticeList = null;
@@ -161,9 +162,85 @@ public class NoticeController {
     public String noticeDelete(HttpServletRequest request, ModelMap model) {
         log.info(this.getClass().getName() + ".noticeDelete start");
 
+        String msg = "";
+
+        try {
+            String nSeq = CmmUtil.nvl(request.getParameter("nSeq"));
+            log.info("nSep : {}", nSeq);
+
+            NoticeDto noticeDto = new NoticeDto();
+            noticeDto.setNoticeSeq(Long.parseLong(nSeq));
+
+            // 게시글 삭제하기 DB
+            noticeService.deleteNoticeInfo(noticeDto);
+
+            msg = "삭제되었습니다.";
+
+        } catch (Exception e) {
+            msg = "실패하였습니다. : " + e.getMessage();
+            log.info(e.toString());
+            e.printStackTrace();
+        } finally {
+            log.info(this.getClass().getName() + ".noticeDelete end");
+
+            // 결과 메시지 전달하기
+            model.addAttribute("msg", msg);
+        }
+        return "/notice/MsgToList";
+    }
+
+    // 게시판 작성 페이지 이동
+    @GetMapping("/noticeReg")
+    public String noticeReg() {
+        log.info(this.getClass().getName() + ".noticeReg start");
+
+        log.info(this.getClass().getName() + ".noticeReg end");
+        return "/notice/NoticeReg";
+    }
+
+    // 게시판 글 등록
+    @PostMapping("/noticeInsert")
+    public String noticeInsert(HttpSession session, HttpServletRequest request, ModelMap model) {
+        log.info(this.getClass().getName() + ".noticeInsert start");
+
+        String msg = "";
+
+        try {
+            // 게시판 글 등록되기 위해 사용되는 form 객체의 하위 input 객체 등을 받아오기 위해 사용
+            String user_id = CmmUtil.nvl((String) session.getAttribute("SESSION_USER_ID"));
+            String title = CmmUtil.nvl(request.getParameter("title"));
+            String noticeYn = CmmUtil.nvl(request.getParameter("noticeYn"));
+            String contents = CmmUtil.nvl(request.getParameter("contents"));
+
+            log.info("user_id : {}", user_id);
+            log.info("title : {}", title);
+            log.info("noticeYn : {}", noticeYn);
+            log.info("contents : {}", contents);
+
+            NoticeDto noticeDto = new NoticeDto();
+            noticeDto.setUserId(user_id);
+            noticeDto.setTitle(title);
+            noticeDto.setNoticeYn(noticeYn);
+            noticeDto.setContents(contents);
+
+            // 게시글 등록하기 위한 비즈니스 로직을 호출
+            noticeService.InsertNoticeInfo(noticeDto);
+
+            // 저장이 완료되면 사용자에게 보여줄 메시지
+            msg = "등록되었습니다.";
 
 
-        log.info(this.getClass().getName() + ".noticeDelete end");
-        return "";
+        } catch (Exception e) {
+            // 저장이 실패되면 사용자에게 보여줄 메시지
+            msg = "실패하였습니다. : " + e.getMessage();
+            log.info(e.toString());
+            e.printStackTrace();
+        } finally {
+            log.info(this.getClass().getName() + ".noticeInsert end");
+
+            // 결과 메시지 전달하기
+            model.addAttribute("msg", msg);
+        }
+        return "/notice/MsgToList";
     }
 }

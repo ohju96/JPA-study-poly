@@ -1,6 +1,5 @@
 package com.kopo.poly.data.entity;
 
-import com.sun.istack.NotNull;
 import lombok.*;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
@@ -15,6 +14,7 @@ import javax.persistence.*;
 @DynamicUpdate
 @Builder
 @Entity
+@Cacheable
 public class NoticeEntity {
 
     @Id
