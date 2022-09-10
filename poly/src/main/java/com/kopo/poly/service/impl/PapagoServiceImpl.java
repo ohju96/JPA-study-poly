@@ -62,4 +62,21 @@ public class PapagoServiceImpl implements PapagoService {
         log.info("### detectLangs {} : end", this.getClass().getName());
         return resultPapagoDto;
     }
+
+    @Override
+    public PapagoDto translate(PapagoDto papagoDto) throws Exception {
+        log.info("### start : {}", this.getClass().getName());
+
+        //언어 종류 찾기
+        PapagoDto resultPapagoDto = this.detectLangs(papagoDto);
+
+        // 찾은 언어 종류
+        String langCode = CmmUtil.nvl(resultPapagoDto.getLangCode());
+
+        // 사용 후 메모리에서 삭제
+        resultPapagoDto = null;
+
+        log.info("### end : {}", this.getClass().getName());
+        return null;
+    }
 }
