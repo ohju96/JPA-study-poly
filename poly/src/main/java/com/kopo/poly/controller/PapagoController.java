@@ -3,6 +3,7 @@ package com.kopo.poly.controller;
 import com.kopo.poly.data.dto.PapagoDto;
 import com.kopo.poly.service.PapagoService;
 import com.kopo.poly.util.CmmUtil;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,6 +42,26 @@ public class PapagoController {
 
         log.info("### {} : end", this.getClass().getName());
         return resultPapagoDto;
+    }
+
+    @GetMapping("/translate")
+    public PapagoDto translate(HttpServletRequest request) throws Exception {
+        log.info(this.getClass().getName() + ".translate start");
+
+        String text = CmmUtil.nvl(request.getParameter("text"));
+        log.info("text : {}", text);
+
+        PapagoDto papagoDto = new PapagoDto();
+        papagoDto.setText(text);
+
+        PapagoDto resultDto = papagoService.translate(papagoDto);
+
+        if (resultDto == null) {
+            resultDto = new PapagoDto();
+        }
+
+        log.info(this.getClass().getName() + ".translate end");
+        return resultDto;
     }
 
 }
