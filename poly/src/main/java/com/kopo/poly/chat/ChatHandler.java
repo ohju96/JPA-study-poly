@@ -2,8 +2,11 @@ package com.kopo.poly.chat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kopo.poly.data.dto.ChatDto;
+import com.kopo.poly.data.dto.PapagoDto;
+import com.kopo.poly.service.PapagoService;
 import com.kopo.poly.util.CmmUtil;
 import com.kopo.poly.util.DateUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -16,6 +19,7 @@ import java.util.*;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class ChatHandler extends TextWebSocketHandler {
 
     // 웹 소켓에 접속되는 사용자들을 저장, 중복 제거를 위해 Set 데이터구조 사용
@@ -23,6 +27,8 @@ public class ChatHandler extends TextWebSocketHandler {
 
     // 채팅룸 조회하기 위해 사용
     public static Map<String, String> roomInfo = Collections.synchronizedMap(new LinkedHashMap<>());
+
+    private final PapagoService papagoService;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -95,17 +101,58 @@ public class ChatHandler extends TextWebSocketHandler {
         // 메시지 발송시간 서버 시간으로 설정하여 추가하기
         chatDto.setDate(DateUtil.getDateTime("yyyy-MM-dd hh:mm:ss"));
 
+        // == 번역을 위한 기능 추가 파트 == //
+
+        String sendMsg = CmmUtil.nvl(chatDto.getMsg()); //발송하는 메시지 번역을 위해 가져온다.
+        log.info("sendMsg : {}", sendMsg);
+
+        // 채팅 메시지 네이버 PapagoAPI로 영작 및 번역
+        PapagoDto papagoDto = new PapagoDto();
+        papagoDto.setText(sendMsg);
+
+        PapagoDto resultPapagoDto = papagoService.translate(papagoDto);
+
+        if (resultPapagoDto == null) {
+            resultPapagoDto = new PapagoDto();
+        }
+
+        papagoDto = null;
+
+        String translatedText = CmmUtil.nvl(resultPapagoDto.getTranslatedText()); // 번역된 글
+        String scrLangType = CmmUtil.nvl(resultPapagoDto.getScrLangType()); // 원문의 언어 종류
+        String tarLangType = CmmUtil.nvl(resultPapagoDto.getTarLangType());
+
+        log.info("translatedText : {}", translatedText);
+        log.info("scrLangType : {}", scrLangType);
+        log.info("tarLangType : {}", tarLangType);
+
+        sendMsg = "(원문) " + sendMsg; //발송하는 채팅 메시지
+
+        if (tarLangType.equals("en")) {
+            sendMsg += "=> (영어 영작) " + translatedText;
+        } else if (tarLangType.equals("ko")) {
+            sendMsg += "=> (한국어 번역) " + translatedText;
+        }
+
+        chatDto.setMsg(sendMsg);
+
+        // == 파트 종료 == //
+
+
         // ChatDto를 JSON으로 다시 변환하기
         String json = new ObjectMapper().writeValueAsString(chatDto);
         log.info("json : {}", json);
 
         // 웹소켓에 접속된 모든 사용자 검색
         clients.forEach(s -> {
-            try {
-                TextMessage chatMsg = new TextMessage(json);
-                s.sendMessage(chatMsg);
-            } catch (IOException e) {
-                log.info("Error : {}", e);
+            // 내가 접속한 채팅방에 있는 세션만 메시지 보내기
+            if (roomNameHash.equals(s.getAttributes().get("roomNameHash"))){
+                try {
+                    TextMessage chatMsg = new TextMessage(json);
+                    s.sendMessage(chatMsg);
+                } catch (IOException e) {
+                    log.info("Error : {}", e);
+                }
             }
         });
 
