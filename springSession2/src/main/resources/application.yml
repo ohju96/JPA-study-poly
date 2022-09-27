@@ -1,0 +1,22 @@
+
+spring:
+  profiles:
+    active: prod
+
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    password: 1234
+
+  session:
+    store-type: redis
+    redis:
+      flush-mode: on_save
+
+server:
+  port: 26000
+
+  servlet:
+    session:
+      timeout: 600
+
